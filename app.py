@@ -32,7 +32,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Bucket List Journey</title>
+    <title>My Bucket List Journey - Aarav Bansal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -56,7 +56,28 @@ HTML_TEMPLATE = """
             padding-bottom: 80px;
         }
 
-        header { text-align: center; padding: 3rem 1.5rem 1.5rem; }
+        header { 
+            position: relative; 
+            text-align: center; 
+            padding: 3rem 1.5rem 1.5rem; 
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .author-tag {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #e2e8f0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #475569;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
         header .badge { background: #e0e7ff; color: #4338ca; padding: 6px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; display: inline-block; margin-bottom: 0.75rem; }
         header h1 { font-size: 2.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
 
@@ -68,9 +89,22 @@ HTML_TEMPLATE = """
         .cards-grid { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 28px; padding: 0 1.5rem; }
         .card { background: var(--card-bg); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid #f1f5f9; display: flex; flex-direction: column; position: relative; }
 
-        /* Multi-Image Gallery Grid */
-        .img-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(50%, 1fr)); gap: 2px; height: 230px; background: #e2e8f0; overflow: hidden; position: relative; }
-        .gallery-img { width: 100%; height: 100%; object-fit: cover; }
+        /* Full Image Scrollable Gallery */
+        .img-gallery { 
+            display: flex; 
+            overflow-x: auto; 
+            scroll-snap-type: x mandatory;
+            height: 250px; 
+            background: #0f172a; 
+            position: relative; 
+        }
+        .gallery-img { 
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%; 
+            object-fit: contain; /* Shows full picture without cropping */
+            scroll-snap-align: start;
+        }
 
         .q-badge { position: absolute; top: 12px; left: 12px; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; z-index: 2; }
         .q1 { background: #ffe4e6; color: #e11d48; } .q2 { background: #dcfce7; color: #16a34a; }
@@ -99,6 +133,7 @@ HTML_TEMPLATE = """
 <body>
 
     <header>
+        <div class="author-tag">Created by Aarav Bansal</div>
         <span class="badge">English Project</span>
         <h1>My Bucket List Journal</h1>
     </header>
@@ -116,7 +151,13 @@ HTML_TEMPLATE = """
         <div class="card">
             <span class="q-badge q{{ item[2] }}">Q{{ item[2] }}</span>
             <div class="actions">
-                <button class="action-btn" onclick="openEditModal('{{ item[0] }}', '{{ item[1] }}', '{{ item[2] }}', '{{ item[4]|replace('\\n', ' ') }}')" title="Edit Post">✏️</button>
+                <button class="action-btn" 
+                        data-id="{{ item[0] }}"
+                        data-title="{{ item[1]|e }}"
+                        data-quarter="{{ item[2] }}"
+                        data-summary="{{ item[4]|e }}"
+                        onclick="openEditModalFromBtn(this)" 
+                        title="Edit Post">✏️</button>
                 <a href="/delete/{{ item[0] }}" class="action-btn" onclick="return confirm('Delete entry?')" title="Delete Post">🗑️</a>
             </div>
             
@@ -153,7 +194,7 @@ HTML_TEMPLATE = """
                     </select>
                 </div>
                 <div class="input-group">
-                    <label>Upload Photo(s) <span style="font-weight: 400; color: #64748b;">(Hold Ctrl/Cmd to choose multiple)</span></label>
+                    <label>Upload Photo(s) <span style="font-weight: 400; color: #64748b;">(Hold Ctrl/Cmd to select multiple)</span></label>
                     <input type="file" name="photos" class="form-input" accept="image/*" multiple id="formPhotos">
                 </div>
                 <div class="input-group">
@@ -177,13 +218,18 @@ HTML_TEMPLATE = """
             document.getElementById('modalOverlay').style.display = 'flex';
         }
 
-        function openEditModal(id, title, quarter, summary) {
+        function openEditModalFromBtn(btn) {
+            var id = btn.getAttribute('data-id');
+            var title = btn.getAttribute('data-title');
+            var quarter = btn.getAttribute('data-quarter');
+            var summary = btn.getAttribute('data-summary');
+
             document.getElementById('modalTitle').innerText = 'Edit Bucket List Item';
             document.getElementById('entryForm').action = '/edit/' + id;
             document.getElementById('formTitle').value = title;
             document.getElementById('formQuarter').value = quarter;
             document.getElementById('formSummary').value = summary;
-            document.getElementById('formPhotos').required = false; // Optional to upload new photos when editing
+            document.getElementById('formPhotos').required = false;
             document.getElementById('modalOverlay').style.display = 'flex';
         }
 
@@ -239,7 +285,6 @@ def edit_entry(item_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    # If new photos are uploaded during edit, save them and update filenames
     saved_filenames = []
     for photo in photos:
         if photo and photo.filename != '':
