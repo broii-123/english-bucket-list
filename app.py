@@ -246,6 +246,13 @@ def home():
     cursor.execute('SELECT * FROM items ORDER BY quarter ASC, id DESC')
     items = cursor.fetchall()
     conn.close()
+
+    # If database is empty on Render, load these default items automatically
+    if not items:
+        items = [
+            (1, "My First Bucket List Entry", 1, "image1.jpg", "Summary description of your bucket list entry.")
+        ]
+
     return render_template_string(HTML_TEMPLATE, items=items)
 
 @app.route('/add', methods=['POST'])
